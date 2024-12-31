@@ -1001,6 +1001,7 @@ Will return a value that matches this schema:
 
   (decode-dtcg-json [_ parsed-json]
     (let [;; tokens-studio/plugin will add these meta properties, remove them for now
+          metadata (get parsed-json "$metadata")
           sets-data (dissoc parsed-json "$themes" "$metadata")
           themes-data (->> (get parsed-json "$themes")
                            (map (fn [theme]
@@ -1009,11 +1010,12 @@ Will return a value that matches this schema:
                                       (update "sets" keys)))))
           lib (make-tokens-lib)
           lib' (reduce
-                (fn [lib [set-name tokens]]
-                  (add-set lib (make-token-set
-                                :name set-name
-                                :tokens (flatten-nested-tokens-json tokens ""))))
-                lib sets-data)]
+                (fn [lib set-name]
+                  (let [tokens (get sets-data set-name)]
+                    (add-set lib (make-token-set
+                                 :name set-name
+                                 :tokens (flatten-nested-tokens-json tokens "")))))
+                lib (get metadata "tokenSetOrder"))]
       (reduce
        (fn [lib {:strs [name group description is-source modified-at sets]}]
          (add-theme lib (TokenTheme. name
