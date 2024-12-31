@@ -1021,8 +1021,10 @@ Will return a value that matches this schema:
          (add-theme lib (TokenTheme. name
                                      group
                                      description
-                                     is-source
-                                     (dt/parse-instant modified-at)
+                                     (some? is-source)
+                                     (or (some-> modified-at
+                                                 (dt/parse-instant))
+                                         (dt/now))
                                      (set sets))))
        lib' themes-data)))
 
