@@ -220,7 +220,7 @@
                                     :position :right
                                     :fields fields
                                     :action "edit"
-                                    :selected-token-set-path selected-token-set-path
+                                    :selected-token-set-name selected-token-set-path
                                     :token token})))}
      {:title (tr "workspace.token.duplicate")
       :no-selectable true
@@ -349,12 +349,12 @@
         selected-shapes (into [] (keep (d/getf objects)) selected)
         token-name (:token-name mdata)
         token (mf/deref (refs/workspace-selected-token-set-token token-name))
-        selected-token-set-path (mf/deref refs/workspace-selected-token-set-path)]
+        selected-token-set-name (mf/deref refs/workspace-selected-token-set-name)]
     [:ul {:class (stl/css :context-list)}
      [:& menu-tree {:submenu-offset width
                     :submenu-direction direction
                     :token token
-                    :selected-token-set-path selected-token-set-path
+                    :selected-token-set-name selected-token-set-name
                     :selected-shapes selected-shapes}]]))
 
 (mf/defc token-context-menu

@@ -57,7 +57,7 @@
                        :aria-label (tr "labels.close")}]
      [:& form {:token token
                :action action
-               :selected-token-set-path selected-token-set-path
+               :selected-token-set-name selected-token-set-path
                :token-type token-type}]]))
 
 ;; Modals ----------------------------------------------------------------------

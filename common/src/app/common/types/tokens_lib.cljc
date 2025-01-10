@@ -654,6 +654,42 @@ used for managing active sets without a user created theme.")
 
 ;; === Import / Export from DTCG format
 
+(defn walk-sets-tree-seq
+  [nodes & {:keys [walk-children?]
+            :or {walk-children? (constantly true)}}]
+  (let [walk (fn walk [[k v :as node] {:keys [parent depth]
+                                       :or {parent []
+                                            depth 0}
+                                       :as opts}]
+               (lazy-seq
+                (cond
+                  ;; Iterate set leafs
+                  (d/ordered-map? node) (mapcat #(walk % opts) node)
+
+                  ;;; Set
+                  (and v (instance? TokenSet v))
+                  [{:group? false
+                    :path (split-token-set-path (:name v))
+                    :parent-path parent
+                    :depth depth
+                    :set v}]
+
+                  ;; Set group
+                  (and v (d/ordered-map? v))
+                  (let [unprefixed-path (last (split-set-str-path-prefix k))
+                        path (conj parent unprefixed-path)
+                        item {:group? true
+                              :path path
+                              :parent-path parent
+                              :depth depth}]
+                    (if (walk-children? path)
+                      [item]
+                      (cons
+                       item
+                       (mapcat #(walk % (assoc opts :parent path :depth (inc depth))) v)))))))]
+
+    (walk nodes nil)))
+
 (defn flatten-nested-tokens-json
   "Recursively flatten the dtcg token structure, joining keys with '.'."
   [tokens token-path]

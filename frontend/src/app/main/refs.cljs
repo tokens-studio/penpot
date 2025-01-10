@@ -15,8 +15,8 @@
    [app.common.types.tokens-lib :as ctob]
    [app.config :as cf]
    [app.main.data.workspace.state-helpers :as wsh]
+   [app.main.data.workspace.tokens.selected-set :as dwts]
    [app.main.store :as st]
-   [app.main.ui.workspace.tokens.token-set :as wtts]
    [okulary.core :as l]))
 
 ;; ---- Global refs
@@ -453,11 +453,8 @@
 (def workspace-token-themes-no-hidden
   (l/derived #(remove ctob/hidden-temporary-theme? %) workspace-token-themes))
 
-(def workspace-selected-token-set-path
-  (l/derived wtts/get-selected-token-set-path st/state))
-
-(def workspace-token-set-group-selected?
-  (l/derived wtts/token-group-selected? st/state))
+(def workspace-selected-token-set-name
+  (l/derived dwts/get-selected-token-set-name st/state))
 
 (def workspace-ordered-token-sets
   (l/derived #(or (some-> % ctob/get-sets) []) tokens-lib))
@@ -488,12 +485,12 @@
 (def workspace-selected-token-set-token
   (fn [token-name]
     (l/derived
-     #(some-> (wtts/get-selected-token-set %)
-              (ctob/get-token token-name))
+     #(dwts/get-selected-token-set-token % token-name)
      st/state)))
 
 (def workspace-selected-token-set-tokens
-  (l/derived #(or (wtts/get-selected-token-set-tokens %) {}) st/state))
+  (l/derived #(or (dwts/get-selected-token-set-tokens %) {}) st/state))
+
 
 (def plugins-permissions-peek
   (l/derived (fn [state]
