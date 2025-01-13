@@ -1013,8 +1013,8 @@ Will return a value that matches this schema:
                 (fn [lib set-name]
                   (let [tokens (get sets-data set-name)]
                     (add-set lib (make-token-set
-                                 :name set-name
-                                 :tokens (flatten-nested-tokens-json tokens "")))))
+                                  :name set-name
+                                  :tokens (flatten-nested-tokens-json tokens "")))))
                 lib (get metadata "tokenSetOrder"))]
       (reduce
        (fn [lib {:strs [name group description is-source modified-at sets]}]
