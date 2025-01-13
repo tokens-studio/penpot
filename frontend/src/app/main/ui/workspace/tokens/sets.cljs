@@ -93,17 +93,17 @@
          :icon-id (if mixed? ic/remove ic/tick)}])]))
 
 (mf/defc sets-tree-set-group
-  [{:keys [label collapsed? tree-depth tree-path active? selected? editing? on-toggle-collapse on-toggle on-edit on-edit-reset on-edit-submit]}]
-  (let [editing?' (editing? tree-path)
-        active?'  (active? tree-path)
+  [{:keys [label collapsed? tree-depth tree-path active? selected? on-toggle-collapse on-toggle editing-id editing? on-edit on-edit-reset on-edit-submit]}]
+  (let [active?'  (active? tree-path)
+        editing? (editing? editing-id)
 
         on-context-menu
         (mf/use-fn
-         (mf/deps editing? tree-path)
+         (mf/deps editing? editing-id)
          (fn [event]
            (dom/prevent-default event)
            (dom/stop-propagation event)
-           (when-not (editing? tree-path)
+           (when-not editing?
              (st/emit!
               (wdt/show-token-set-context-menu
                {:position (dom/get-client-position event)
@@ -119,7 +119,7 @@
         on-double-click
         (mf/use-fn
          (mf/deps tree-path)
-         #(on-edit tree-path))
+         #(on-edit editing-id))
 
         on-checkbox-click
         (mf/use-fn
@@ -163,7 +163,7 @@
        :aria-label (tr "labels.collapse")
        :icon (if collapsed? "arrow-right" "arrow-down")
        :variant "action"}]
-     (if editing?'
+     (if editing?
        [:& editing-label
         {:default-value label
          :on-cancel on-edit-reset
@@ -182,26 +182,26 @@
           :arial-label (tr "workspace.token.select-set")}]])]))
 
 (mf/defc sets-tree-set
-  [{:keys [set label tree-depth tree-path selected? on-select active? on-toggle editing? on-edit on-edit-reset on-edit-submit]}]
+  [{:keys [set label tree-depth tree-path selected? on-select active? on-toggle editing-id editing? on-edit on-edit-reset on-edit-submit]}]
   (let [set-name  (.-name set)
-        editing?' (editing? tree-path)
+        editing? (editing? editing-id)
         active?'  (some? (active? set-name))
 
         on-click
         (mf/use-fn
-         (mf/deps editing?' tree-path)
+         (mf/deps editing? tree-path)
          (fn [event]
            (dom/stop-propagation event)
-           (when-not editing?'
+           (when-not editing?
              (on-select set-name))))
 
         on-context-menu
         (mf/use-fn
-         (mf/deps editing?' tree-path)
+         (mf/deps editing? tree-path)
          (fn [event]
            (dom/prevent-default event)
            (dom/stop-propagation event)
-           (when-not editing?'
+           (when-not editing?
              (st/emit!
               (wdt/show-token-set-context-menu
                {:position (dom/get-client-position event)
@@ -210,7 +210,8 @@
         on-double-click
         (mf/use-fn
          (mf/deps tree-path)
-         #(on-edit tree-path))
+         (fn []
+           (on-edit editing-id)))
 
         on-checkbox-click
         (mf/use-fn
@@ -262,7 +263,7 @@
       {:icon-id "document"
        :class (stl/css-case :icon true
                             :root-icon (not tree-depth))}]
-     (if editing?'
+     (if editing?
        [:& editing-label
         {:default-value label
          :on-cancel on-edit-reset
@@ -291,7 +292,8 @@
            on-toggle-set-group
            set-node]
     :as props}]
-  (let [collapsed-paths (mf/use-state #{})
+  (let [{:keys [editing? new? on-edit on-reset] :as ctx} (sets-context/use-context)
+        collapsed-paths (mf/use-state #{})
         collapsed?
         (mf/use-fn
          #(contains? @collapsed-paths %))
@@ -304,35 +306,39 @@
                                      (conj % path)))))]
     (for [{:keys [group? path parent-path depth] :as node} (ctob/walk-sets-tree-seq set-node :walk-children? #(contains? @collapsed-paths %))]
       (if (not group?)
-        [:& sets-tree-set
-         {:key (dm/str :set path)
-          :set (:set node)
-          :active? active?
-          :selected? (selected? (get-in node [:set :name]))
-          :on-select on-select
-          :label (last path)
-          :tree-path path
-          :tree-depth depth
-          :editing? editing?
-          :on-toggle on-toggle-set
-          :on-edit on-edit
-          :on-edit-reset on-edit-reset
-          :on-edit-submit on-edit-submit-set}]
-        [:& sets-tree-set-group
-         {:key (dm/str :group path)
-          :selected? false
-          :collapsed? (collapsed? path)
-          :active? group-active?
-          :on-select on-select
-          :label (last path)
-          :tree-path path
-          :tree-depth depth
-          :editing? editing?
-          :on-toggle-collapse on-toggle-collapse
-          :on-toggle on-toggle-set-group
-          :on-edit on-edit
-          :on-edit-reset on-edit-reset
-          :on-edit-submit on-edit-submit-group}]))))
+        (let [editing-id (sets-context/set-group-path->id path)]
+          [:& sets-tree-set
+           {:key editing-id
+            :set (:set node)
+            :active? active?
+            :selected? (selected? (get-in node [:set :name]))
+            :on-select on-select
+            :label (last path)
+            :tree-path path
+            :tree-depth depth
+            :on-toggle on-toggle-set
+            :editing-id editing-id
+            :editing? editing?
+            :on-edit on-edit
+            :on-edit-reset on-edit-reset
+            :on-edit-submit on-edit-submit-set}])
+        (let [editing-id (sets-context/set-path->id path)]
+          [:& sets-tree-set-group
+           {:key editing-id
+            :selected? false
+            :collapsed? (collapsed? path)
+            :active? group-active?
+            :on-select on-select
+            :label (last path)
+            :tree-path path
+            :tree-depth depth
+            :on-toggle-collapse on-toggle-collapse
+            :on-toggle on-toggle-set-group
+            :editing-id editing-id
+            :editing? editing?
+            :on-edit on-edit
+            :on-edit-reset on-edit-reset
+            :on-edit-submit on-edit-submit-group}])))))
 
 (mf/defc controlled-sets-list
   [{:keys [token-sets
@@ -358,31 +364,19 @@
                 (empty? token-sets))
          [:> text* {:as "span" :typography "body-small" :class (stl/css :empty-state-message-sets)}
           (tr "workspace.token.no-sets-create")]
-         [:*
-          [:& sets-tree
-           {:set-node token-sets
-            :selected? token-set-selected?
-            :on-select on-select
-            :active? token-set-active?
-            :group-active? token-set-group-active?
-            :on-toggle-set on-toggle-token-set
-            :on-toggle-set-group on-toggle-token-set-group
-            :editing? editing?
-            :on-edit on-edit
-            :on-edit-reset on-reset
-            :on-edit-submit-set on-update-token-set
-            :on-edit-submit-group on-update-token-set-group}]
-          (when new?
-            [:& sets-tree-set
-             {:set (ctob/make-token-set :name "")
-              :label ""
-              :selected? (constantly true)
-              :active? (constantly true)
-              :editing? (constantly true)
-              :on-select (constantly nil)
-              :on-edit (constantly nil)
-              :on-edit-reset on-reset
-              :on-edit-submit on-create-token-set}])]))]))
+         [:& sets-tree
+          {:set-node token-sets
+           :selected? token-set-selected?
+           :on-select on-select
+           :active? token-set-active?
+           :group-active? token-set-group-active?
+           :on-toggle-set on-toggle-token-set
+           :on-toggle-set-group on-toggle-token-set-group
+           :editing? editing?
+           :on-edit on-edit
+           :on-edit-reset on-reset
+           :on-edit-submit-set on-update-token-set
+           :on-edit-submit-group on-update-token-set-group}]))]))
 
 (mf/defc sets-list
   [{:keys []}]
