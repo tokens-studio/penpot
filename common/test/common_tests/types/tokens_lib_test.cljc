@@ -237,8 +237,8 @@
                           (ctob/add-set (ctob/make-token-set :name "foo/bar/baz/baz-child-2"))
                           (ctob/add-theme (ctob/make-token-theme :name "theme" :sets #{"foo/bar/baz/baz-child-1"})))
           tokens-lib' (-> tokens-lib
-                          (ctob/rename-set-group "foo/bar" "foo/bar-renamed")
-                          (ctob/rename-set-group "foo/bar-renamed/baz" "foo/bar-renamed/baz-renamed"))
+                          (ctob/rename-set-group ["foo" "bar"] "bar-renamed")
+                          (ctob/rename-set-group ["foo" "bar-renamed" "baz"] "baz-renamed"))
           expected-set-names (ctob/get-ordered-set-names tokens-lib')
           expected-theme-sets (-> (ctob/get-theme tokens-lib' "" "theme")
                                   :sets)]

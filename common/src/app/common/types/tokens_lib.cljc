@@ -844,20 +844,23 @@ Will return a value that matches this schema:
              (tree-seq d/ordered-map? vals)
              (filter (partial instance? TokenSet))))
 
-  (get-sets-at-path [_ path-str]
-    (some->> (split-token-set-path path-str)
-             (map add-set-path-group-prefix)
+  (get-sets-at-path [_ path]
+    (some->> (map add-set-path-group-prefix path)
              (get-in sets)
              (tree-seq d/ordered-map? vals)
              (filter (partial instance? TokenSet))))
 
-  (rename-set-group [this from-path-str to-path-str]
-    (->> (get-sets-at-path this from-path-str)
-         (reduce
-          (fn [lib set]
-            (update-set lib (:name set) (fn [set']
-                                          (update set' :name #(str to-path-str (str/strip-prefix % from-path-str))))))
-          this)))
+  (rename-set-group [this path path-fname]
+    (let [from-path-str (join-set-path path)
+          to-path-str (-> (into [] (drop-last path))
+                          (conj path-fname)
+                          (join-set-path))
+          sets (get-sets-at-path this path)]
+      (reduce
+       (fn [lib set]
+         (update-set lib (:name set) (fn [set']
+                                       (update set' :name #(str to-path-str (str/strip-prefix % from-path-str))))))
+       this sets)))
 
   (get-ordered-set-names [this]
     (map :name (get-sets this)))

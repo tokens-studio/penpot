@@ -36,14 +36,8 @@
 (defn on-update-token-set [set-name token-set]
   (st/emit! (wdt/update-token-set set-name token-set)))
 
-(defn on-update-token-set-group [from-prefixed-path-str to-path-str]
-  (st/emit!
-   (wdt/rename-token-set-group
-    (ctob/prefixed-set-path-string->set-name-string from-prefixed-path-str)
-    (-> (ctob/prefixed-set-path-string->set-path from-prefixed-path-str)
-        (butlast)
-        (ctob/join-set-path)
-        (ctob/join-set-path-str to-path-str)))))
+(defn on-update-token-set-group [set-group-path set-group-fname]
+  (st/emit! (wdt/rename-token-set-group set-group-path set-group-fname)))
 
 (defn on-create-token-set [_ token-set]
   (st/emit! (wdt/create-token-set token-set)))

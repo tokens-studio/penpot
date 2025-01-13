@@ -418,8 +418,8 @@
     [:rename-token-set-group
      [:map {:title "RenameTokenSetGroup"}
       [:type [:= :rename-token-set-group]]
-      [:from-path-str :string]
-      [:to-path-str :string]]]
+      [:set-group-path [:vector :string]]
+      [:set-group-fname :string]]]
 
     [:mod-token-set
      [:map {:title "ModTokenSetChange"}
@@ -1070,11 +1070,11 @@
                                 (ctob/add-sets (map ctob/make-token-set token-sets)))))
 
 (defmethod process-change :rename-token-set-group
-  [data {:keys [from-path-str to-path-str]}]
+  [data {:keys [set-group-path set-group-fname]}]
   (update data :tokens-lib (fn [lib]
                              (-> lib
                                  (ctob/ensure-tokens-lib)
-                                 (ctob/rename-set-group from-path-str to-path-str)))))
+                                 (ctob/rename-set-group set-group-path set-group-fname)))))
 
 (defmethod process-change :mod-token-set
   [data {:keys [name token-set]}]
