@@ -302,6 +302,12 @@
   [prefixed-path-str]
   (= (get-prefixed-token-set-final-prefix prefixed-path-str) set-prefix))
 
+(defn replace-last-path-name
+  "Replaces the last element in a `path` vector with `name`."
+  [path name]
+  (-> (into [] (drop-last path))
+      (conj name)))
+
 (defn tokens-tree
   "Convert tokens into a nested tree with their `:name` as the path.
   Optionally use `update-token-fn` option to transform the token."
@@ -852,8 +858,7 @@ Will return a value that matches this schema:
 
   (rename-set-group [this path path-fname]
     (let [from-path-str (join-set-path path)
-          to-path-str (-> (into [] (drop-last path))
-                          (conj path-fname)
+          to-path-str (-> (replace-last-path-name path path-fname)
                           (join-set-path))
           sets (get-sets-at-path this path)]
       (reduce

@@ -814,8 +814,7 @@
 
 (defn rename-token-set-group
   [changes set-group-path set-group-fname]
-  (let [undo-path (-> (into [] (drop-last set-group-path))
-                      (conj set-group-fname))
+  (let [undo-path (ctob/replace-last-path-name set-group-path set-group-fname)
         undo-fname (last set-group-path)]
     (-> changes
         (update :redo-changes conj {:type :rename-token-set-group :set-group-path set-group-path :set-group-fname set-group-fname})
