@@ -17,7 +17,10 @@
 (def filter-existing-values? false)
 
 (def attributes->shape-update
-  {#{:r1 :r2 :r3 :r4} wtch/update-shape-radius-all
+  {#{:r1} wtch/update-shape-radius-single-corner
+   #{:r2} wtch/update-shape-radius-single-corner
+   #{:r3} wtch/update-shape-radius-single-corner
+   #{:r4} wtch/update-shape-radius-single-corner
    ctt/color-keys wtch/update-fill-stroke
    ctt/stroke-width-keys wtch/update-stroke-width
    ctt/sizing-keys wtch/update-shape-dimensions
@@ -68,6 +71,12 @@
   (reduce
    (fn [acc [attrs v]]
      (cond
+       ;; Split up actions for separate radius tokens
+       (and
+        (some attrs #{:r1 :r2 :r3 :r4})
+        (not (every? attrs #{:r1 :r2 :r3 :r4}))) (into acc (->> (select-keys attrs #{:r1 :r2 :r3 :r4})
+                                                                (map (fn [[k _v]]
+                                                                       [#{k} v]))))
        (some attrs #{:widht :height}) (let [[_ a b] (data/diff #{:width :height} attrs)]
                                         (cond-> (assoc acc b v)
                                           ;; Exact match in attrs
