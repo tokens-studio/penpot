@@ -3,6 +3,7 @@
    ["@tokens-studio/sd-transforms" :as sd-transforms]
    ["style-dictionary$default" :as sd]
    [app.common.logging :as l]
+   [app.common.schema :as sm]
    [app.common.transit :as t]
    [app.common.types.tokens-lib :as ctob]
    [app.main.refs :as refs]
@@ -227,6 +228,10 @@
                      (ctob/decode-legacy-json (ctob/ensure-tokens-lib nil) json-data))
                    (catch js/Error e
                      (throw (wte/error-ex-info :error.import/invalid-json-data json-data e))))))
+       (rx/map (fn [tokens-lib]
+                 (if (sm/validate ::ctob/tokens-lib tokens-lib)
+                   tokens-lib
+                   (throw (wte/error-ex-info :error.import/invalid-schema tokens-lib nil)))))
        (rx/mapcat (fn [tokens-lib]
                     (try
                       (-> (ctob/get-all-tokens tokens-lib)
