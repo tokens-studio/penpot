@@ -198,20 +198,21 @@
 
   (build-dictionary [_]
     (let [platform "json"
-          config' (clj->js config)]
-      (-> (sd. config')
-          (.buildAllPlatforms platform)
-          (p/then #(.getPlatformTokens ^js % platform))
-          (p/then #(.-allTokens ^js %))))))
+          config' (clj->js config)
+          build+ (-> (sd. config')
+                     (.buildAllPlatforms platform)
+                     (p/then #(.getPlatformTokens ^js % platform)))]
+      (->> (rx/from build+)
+           (rx/map #(.-allTokens ^js %))))))
 
-(defn resolve-tokens-tree+
+(defn resolve-tokens-tree
   ([tokens-tree get-token]
-   (resolve-tokens-tree+ tokens-tree get-token (StyleDictionary. default-config)))
+   (resolve-tokens-tree tokens-tree get-token (StyleDictionary. default-config)))
   ([tokens-tree get-token style-dictionary]
    (let [sdict (-> style-dictionary
                    (add-tokens tokens-tree)
                    (build-dictionary))]
-     (p/fmap #(process-sd-tokens % get-token) sdict))))
+     (rx/map #(process-sd-tokens % get-token) sdict))))
 
 (defn sd-token-name [^js sd-token]
   (.. sd-token -original -name))
@@ -219,12 +220,12 @@
 (defn sd-token-uuid [^js sd-token]
   (uuid (.-uuid (.-id ^js sd-token))))
 
-(defn resolve-tokens+
+(defn resolve-tokens
   [tokens]
   (let [tokens-tree (ctob/tokens-tree tokens)]
-    (resolve-tokens-tree+ tokens-tree #(get tokens (sd-token-name %)))))
+    (resolve-tokens-tree tokens-tree #(get tokens (sd-token-name %)))))
 
-(defn resolve-tokens-interactive+
+(defn resolve-tokens-interactive
   "Interactive check of resolving tokens.
   Uses a ids map to backtrace the original token from the resolved StyleDictionary token.
 
@@ -237,10 +238,10 @@
   this way after the resolving computation we can restore any token, even clashing ones with the same :name path by just looking up that :id in the ids map."
   [tokens]
   (let [{:keys [tokens-tree ids]} (ctob/backtrace-tokens-tree tokens)]
-    (resolve-tokens-tree+ tokens-tree  #(get ids (sd-token-uuid %)))))
+    (resolve-tokens-tree tokens-tree  #(get ids (sd-token-uuid %)))))
 
-(defn resolve-tokens-with-errors+ [tokens]
-  (resolve-tokens-tree+
+(defn resolve-tokens-with-errors [tokens]
+  (resolve-tokens-tree
    (ctob/tokens-tree tokens)
    #(get tokens (sd-token-name %))
    (StyleDictionary. (assoc default-config :log {:verbosity "verbose"}))))
@@ -316,23 +317,22 @@
                             (throw err)))))))
           (rx/mapcat (fn [tokens-lib]
                        (try
-                         (-> (ctob/get-all-tokens tokens-lib)
-                             (resolve-tokens-with-errors+)
-                             (p/then (fn [_] tokens-lib))
-                             (p/catch (fn [sd-error]
-                                        (let [reference-errors (reference-errors sd-error)]
-                                          ;; We allow reference errors for the users to resolve in the ui and throw on any other errors
-                                          (if reference-errors
-                                            (p/resolved tokens-lib)
-                                            (throw (wte/error-ex-info :error.import/style-dictionary-unknown-error sd-error sd-error)))))))
+                         (->> (ctob/get-all-tokens tokens-lib)
+                              (resolve-tokens-with-errors)
+                              (rx/map (fn [_]
+                                        tokens-lib))
+                              (rx/catch (fn [sd-error]
+                                          (let [reference-errors (reference-errors sd-error)]
+                                            ;; We allow reference errors for the users to resolve in the ui and throw on any other errors
+                                            (if reference-errors
+                                              (p/resolved tokens-lib)
+                                              (throw (wte/error-ex-info :error.import/style-dictionary-unknown-error sd-error sd-error)))))))
                          (catch js/Error e
                            (p/rejected (wte/error-ex-info :error.import/style-dictionary-unknown-error "" e))))))))))
 
 ;; === Hooks
 
 (defonce !tokens-cache (atom nil))
-
-(defonce !theme-tokens-cache (atom nil))
 
 (defn use-resolved-tokens
   "The StyleDictionary process function is async, so we can't use resolved values directly.
@@ -352,19 +352,17 @@
         (cond
           (nil? tokens) nil
           ;; The tokens are already processing somewhere
-          (p/promise? cached) (-> cached
-                                  (p/then #(reset! tokens-state %))
-                                  #_(p/catch js/console.error))
+          (rx/observable? cached) (rx/sub! cached #(reset! tokens-state %))
           ;; Get the cached entry
           (some? cached) (reset! tokens-state cached)
           ;; No cached entry, start processing
-          :else (let [promise+ (if interactive?
-                                 (resolve-tokens-interactive+ tokens)
-                                 (resolve-tokens+ tokens))]
-                  (swap! cache-atom assoc tokens promise+)
-                  (p/then promise+ (fn [resolved-tokens]
-                                     (swap! cache-atom assoc tokens resolved-tokens)
-                                     (reset! tokens-state resolved-tokens)))))))
+          :else (let [resolved-tokens (if interactive?
+                                        (resolve-tokens-interactive tokens)
+                                        (resolve-tokens tokens))]
+                  (swap! cache-atom assoc tokens resolved-tokens)
+                  (rx/sub! resolved-tokens (fn [resolved-tokens]
+                                             (swap! cache-atom assoc tokens resolved-tokens)
+                                             (reset! tokens-state resolved-tokens)))))))
     @tokens-state))
 
 (defn use-resolved-tokens*
@@ -378,12 +376,12 @@
     (mf/with-effect [tokens interactive?]
       (if (seq tokens)
         (let [tpoint  (dt/tpoint-ms)
-              promise (if interactive?
-                        (resolve-tokens-interactive+ tokens)
-                        (resolve-tokens+ tokens))]
+              tokens  (if interactive?
+                        (resolve-tokens-interactive tokens)
+                        (resolve-tokens tokens))]
 
-          (->> promise
-               (p/fmap (fn [resolved-tokens]
+          (-> tokens
+              (rx/sub! (fn [resolved-tokens]
                          (let [elapsed (tpoint)]
                            (l/dbg :hint "use-resolved-tokens*" :elapsed elapsed)
                            (reset! state* resolved-tokens))))))

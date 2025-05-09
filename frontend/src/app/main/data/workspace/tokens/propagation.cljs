@@ -186,8 +186,8 @@
       (when-let [tokens-lib (-> (dsh/lookup-file-data state)
                                 (get :tokens-lib))]
         (let [tokens (-> (ctob/get-active-themes-set-tokens tokens-lib)
-                         (sd/resolve-tokens+))]
-          (->> (rx/from tokens)
+                         (sd/resolve-tokens))]
+          (->> tokens
                (rx/mapcat (fn [sd-tokens]
                             (let [undo-id (js/Symbol)]
                               (rx/concat
