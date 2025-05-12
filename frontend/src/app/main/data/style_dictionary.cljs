@@ -26,26 +26,6 @@
 
 ;; === Style Dictionary
 
-(def setup-style-dictionary
-  "Initiates the StyleDictionary instance.
-  Setup transforms from tokens-studio used to parse and resolved token values."
-  (do
-    (sd-transforms/register sd)
-    (.registerTransform sd #js {:type "value"
-                                :transitive true
-                                :name "myTransitiveTransform"
-                                :filter (fn [_token _options] true)
-                                :transform (fn [token]
-                                             (js/console.log "transform (.-value token)" token)
-                                                ;; token.value will be resolved and transformed at this point
-                                             (.-value token))})
-    (.registerTransformGroup sd #js {:name "runtime"
-                                     :transforms (.concat #js ["myTransitiveTransform"] (sd-transforms/getTransforms #js {:platform "none"}))})
-    (.registerFormat sd #js {:name "custom/json"
-                             :format (fn [^js res]
-                                       (.-tokens (.-dictionary res)))})
-    sd))
-
 (defn- convert-rem-to-px
   "Converts a rem value string to px string by multiplying by 16"
   [value]
@@ -53,6 +33,24 @@
     (let [rem-value (js/parseFloat (second matches))
           px-value (* rem-value 16)]
       (str px-value "px"))))
+
+(def setup-style-dictionary
+  "Initiates the StyleDictionary instance.
+  Setup transforms from tokens-studio used to parse and resolved token values."
+  (do
+    (sd-transforms/register sd)
+    (.registerTransform sd #js {:type "value"
+                                :name "myTransitiveTransform"
+                                :filter (fn [token _options] (.-value token))
+                                :transform (fn [token]
+                                             (or (convert-rem-to-px (.-value token))
+                                                 (.-value token)))})
+    (.registerTransformGroup sd #js {:name "runtime"
+                                     :transforms (.concat #js ["myTransitiveTransform"] (sd-transforms/getTransforms #js {:platform "none"}))})
+    (.registerFormat sd #js {:name "custom/json"
+                             :format (fn [^js res]
+                                       (.-tokens (.-dictionary res)))})
+    sd))
 
 (def default-config
   {:platforms {:json
