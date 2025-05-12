@@ -31,25 +31,24 @@
   Setup transforms from tokens-studio used to parse and resolved token values."
   (do
     (sd-transforms/register sd)
-    (.registerFormat sd #js {:name "custom/json"
-                             :format (fn [^js res]
-                                       (.-tokens (.-dictionary res)))})
-
-    ;; Register custom transform
     (.registerTransform sd #js {:type "value"
                                 :transitive true
                                 :name "myTransitiveTransform"
-                                :filter (fn [token options] true)
+                                :filter (fn [_token _options] true)
                                 :transform (fn [token]
-                                             (js/console.log "transform (.-value token)" (.-value token))
-                                             ;; token.value will be resolved and transformed at this point
+                                             (js/console.log "transform (.-value token)" token)
+                                                ;; token.value will be resolved and transformed at this point
                                              (.-value token))})
+    (.registerTransformGroup sd #js {:name "runtime"
+                                     :transforms (.concat #js ["myTransitiveTransform"] (sd-transforms/getTransforms #js {:platform "none"}))})
+    (.registerFormat sd #js {:name "custom/json"
+                             :format (fn [^js res]
+                                       (.-tokens (.-dictionary res)))})
     sd))
 
 (def default-config
   {:platforms {:json
-               {:transforms ["myTransitiveTransform"]
-                :transformGroup "tokens-studio"
+               {:transformGroup "runtime"
                 ;; Required: The StyleDictionary API is focused on files even when working in the browser
                 :files [{:format "custom/json" :destination "penpot"}]}}
    :preprocessors ["tokens-studio"]
