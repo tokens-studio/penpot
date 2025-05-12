@@ -27,12 +27,14 @@
 ;; === Style Dictionary
 
 (defn- convert-rem-to-px
-  "Converts a rem value string to px string by multiplying by 16"
+  "Converts rem values in a string to px by multiplying by 16, preserving other parts of the string"
   [value]
-  (when-let [matches (re-matches #"([0-9.]+)rem" value)]
-    (let [rem-value (js/parseFloat (second matches))
-          px-value (* rem-value 16)]
-      (str px-value "px"))))
+  (if (string? value)
+    (str/replace value #"([0-9.]+)rem"
+                 (fn [[_ rem-val]]
+                   (let [px-val (* (js/parseFloat rem-val) 16)]
+                     (str px-val "px"))))
+    value))
 
 (def setup-style-dictionary
   "Initiates the StyleDictionary instance.
