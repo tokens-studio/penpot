@@ -20,7 +20,8 @@
    [beicon.v2.core :as rx]
    [cuerdas.core :as str]
    [promesa.core :as p]
-   [rumext.v2 :as mf]))
+   [rumext.v2 :as mf]
+   [app.util.object :as obj]))
 
 (l/set-level! :debug)
 
@@ -64,17 +65,16 @@
     (sd-transforms/register sd)
     (.registerTransform sd #js {:type "value"
                                 :transitive true
-                                :name "myTransitiveTransform"
+                                :name "addUnitMixWarning"
                                 :filter (fn [token _options]
-                                          (has-math-expression? (.-value token)))
+                                          (let [value (.-value token)]
+                                            (and (has-math-expression? value)
+                                                 (has-mixed-units? value))))
                                 :transform (fn [token]
-                                             (let [value (.-value token)]
-                                               (cond
-                                                 (has-mixed-units? value) nil
-                                                 :else value)))})
-
-    (.registerTransformGroup sd #js {:name "runtime"
-                                     :transforms (.concat #js ["myTransitiveTransform"]
+                                             (obj/set! token "hasUnitMixWarning" true)
+                                             (convert-rem-to-px (.-value token)))})
+    (.registerTransformGroup sd #js {:name "penpot"
+                                     :transforms (.concat #js ["addUnitMixWarning"]
                                                           (sd-transforms/getTransforms #js {:platform "none"}))})
     (.registerFormat sd #js {:name "custom/json"
                              :format (fn [^js res]
@@ -83,7 +83,7 @@
 
 (def default-config
   {:platforms {:json
-               {:transformGroup "runtime"
+               {:transformGroup "penpot"
                 ;; Required: The StyleDictionary API is focused on files even when working in the browser
                 :files [{:format "custom/json" :destination "penpot"}]}}
    :preprocessors ["tokens-studio"]
