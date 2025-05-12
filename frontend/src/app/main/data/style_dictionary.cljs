@@ -26,14 +26,25 @@
 
 ;; === Style Dictionary
 
+(def ^:private math-chars #{\+ \- \* \/})
+
+(defn- has-math-expression?
+  "Check if string contains mathematical operators"
+  [value]
+  (and (string? value)
+       (some #(str/includes? value (str %)) math-chars)))
+
 (defn- convert-rem-to-px
   "Converts rem values in a string to px by multiplying by 16, preserving other parts of the string"
   [value]
   (if (string? value)
-    (str/replace value #"([0-9.]+)rem"
-                 (fn [[_ rem-val]]
-                   (let [px-val (* (js/parseFloat rem-val) 16)]
-                     (str px-val "px"))))
+    (if (has-math-expression? value)
+      ;; Don't transform math expressions yet
+      value
+      (str/replace value #"([0-9.]+)rem"
+                   (fn [[_ rem-val]]
+                     (let [px-val (* (js/parseFloat rem-val) 16)]
+                       (str px-val "px")))))
     value))
 
 (def setup-style-dictionary
