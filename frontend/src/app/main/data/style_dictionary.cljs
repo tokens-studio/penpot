@@ -34,6 +34,15 @@
     (.registerFormat sd #js {:name "custom/json"
                              :format (fn [^js res]
                                        (.-tokens (.-dictionary res)))})
+    
+    ;; Register custom transform
+    (.registerTransform sd #js {:type "value"
+                               :transitive true
+                               :name "myTransitiveTransform" 
+                               :filter (fn [token options] true)
+                               :transform (fn [token]
+                                          ;; token.value will be resolved and transformed at this point
+                                          (.-value token))})
     sd))
 
 (def default-config
