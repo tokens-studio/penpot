@@ -28,11 +28,14 @@
 
 (def ^:private math-chars #{\+ \- \* \/})
 
+(defn has-rem? [value]
+  (str/includes? value "rem"))
+
 (defn- has-mixed-units?
   "Check if string contains both rem and px units"
   [value]
   (and (string? value)
-       (str/includes? value "rem")
+       (has-rem? value)
        (str/includes? value "px")))
 
 (defn- has-math-expression?
@@ -66,8 +69,10 @@
                                           (has-math-expression? (.-value token)))
                                 :transform (fn [token]
                                              (let [value (.-value token)]
-                                               (when-not (has-mixed-units? value)
-                                                 (convert-rem-to-px value))))})
+                                               (cond
+                                                 (has-mixed-units? value) nil
+                                                 :else value)))})
+
     (.registerTransformGroup sd #js {:name "runtime"
                                      :transforms (.concat #js ["myTransitiveTransform"]
                                                           (sd-transforms/getTransforms #js {:platform "none"}))})
