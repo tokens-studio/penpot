@@ -48,7 +48,8 @@
 
 (def default-config
   {:platforms {:json
-               {:transformGroup "tokens-studio"
+               {:transforms ["myTransitiveTransform"]
+                :transformGroup "tokens-studio"
                 ;; Required: The StyleDictionary API is focused on files even when working in the browser
                 :files [{:format "custom/json" :destination "penpot"}]}}
    :preprocessors ["tokens-studio"]
