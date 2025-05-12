@@ -213,15 +213,19 @@
                                 (parse-sd-token-numeric-value value))
            output-token (cond (:errors parsed-token-value)
                               (merge origin-token parsed-token-value)
+
                               (:warnings parsed-token-value)
                               (assoc origin-token
                                      :resolved-value (:value parsed-token-value)
                                      :warnings (:warnings parsed-token-value)
                                      :unit (:unit parsed-token-value))
+
                               :else
                               (assoc origin-token
                                      :resolved-value (:value parsed-token-value)
-                                     :unit (:unit parsed-token-value)))]
+                                     :unit (:unit parsed-token-value)))
+           output-token (cond-> output-token
+                          (.-hasUnitMixWarning sd-token) (update :warnings (fnil conj []) (wtw/warning-with-value :warning.style-dictionary/mixed-units value)))]
        (assoc acc (:name output-token) output-token)))
    {} sd-tokens))
 
@@ -284,7 +288,7 @@
   this way after the resolving computation we can restore any token, even clashing ones with the same :name path by just looking up that :id in the ids map."
   [tokens]
   (let [{:keys [tokens-tree ids]} (ctob/backtrace-tokens-tree tokens)]
-    (resolve-tokens-tree tokens-tree  #(get ids (sd-token-uuid %)))))
+    (resolve-tokens-tree tokens-tree #(get ids (sd-token-uuid %)))))
 
 (defn resolve-tokens-with-errors [tokens]
   (resolve-tokens-tree

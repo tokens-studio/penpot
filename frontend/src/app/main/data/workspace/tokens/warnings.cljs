@@ -18,6 +18,10 @@
    {:warning/code :warning.style-dictionary/invalid-referenced-token-value-stroke-width
     :warning/fn (fn [value] (str/join "\n" [(str (tr "workspace.token.resolved-value" value) ".") (tr "workspace.token.stroke-width-range")]))}
 
+   :warning.style-dictionary/mixed-units
+   {:warning/code :warning.style-dictionary/invalid-referenced-token-value-stroke-width
+    :warning/fn (fn [value] (str/format "Resulting output converted to px but has mixed units:\n%s" value))}
+
    :warning/unknown
    {:warning/code :warning/unknown
     :warning/message "Unknown warning"}})

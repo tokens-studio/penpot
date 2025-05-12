@@ -106,6 +106,7 @@
   (let [;; When creating a new token we dont have a token name yet,
         ;; so we use a temporary token name that hopefully doesn't clash with any of the users token names
         token-name (if (str/empty? name-value) "__TOKEN_STUDIO_SYSTEM.TEMP" name-value)]
+    (js/console.log "token" token)
     (cond
       (empty? (str/trim value))
       (p/rejected {:errors [{:error/code :error/empty-input}]})
