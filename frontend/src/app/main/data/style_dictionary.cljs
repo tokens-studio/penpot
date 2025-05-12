@@ -46,6 +46,14 @@
                                        (.-tokens (.-dictionary res)))})
     sd))
 
+(defn- convert-rem-to-px
+  "Converts a rem value string to px string by multiplying by 16"
+  [value]
+  (when-let [matches (re-matches #"([0-9.]+)rem" value)]
+    (let [rem-value (js/parseFloat (second matches))
+          px-value (* rem-value 16)]
+      (str px-value "px"))))
+
 (def default-config
   {:platforms {:json
                {:transformGroup "runtime"
@@ -70,7 +78,8 @@
   "Parses `value` of a numeric `sd-token` into a map like `{:value 1 :unit \"px\"}`.
   If the `value` is not parseable and/or has missing references returns a map with `:errors`."
   [value]
-  (let [parsed-value  (cft/parse-token-value value)
+  (let [value (or (convert-rem-to-px value) value)
+        parsed-value (cft/parse-token-value value)
         out-of-bounds (or (>= (:value parsed-value) sm/max-safe-int)
                           (<= (:value parsed-value) sm/min-safe-int))]
     (if (and parsed-value (not out-of-bounds))
