@@ -55,7 +55,8 @@
     (.registerTransform sd #js {:type "value"
                                 :transitive true
                                 :name "myTransitiveTransform"
-                                :filter (fn [token _options] (.-value token))
+                                :filter (fn [token _options]
+                                          (has-math-expression? (.-value token)))
                                 :transform (fn [token]
                                              (js/console.log "token" token)
                                              (convert-rem-to-px (.-value token)))})
