@@ -42,11 +42,11 @@
   (do
     (sd-transforms/register sd)
     (.registerTransform sd #js {:type "value"
+                                :transitive true
                                 :name "myTransitiveTransform"
                                 :filter (fn [token _options] (.-value token))
                                 :transform (fn [token]
-                                             (or (convert-rem-to-px (.-value token))
-                                                 (.-value token)))})
+                                             (convert-rem-to-px (.-value token)))})
     (.registerTransformGroup sd #js {:name "runtime"
                                      :transforms (.concat #js ["myTransitiveTransform"] (sd-transforms/getTransforms #js {:platform "none"}))})
     (.registerFormat sd #js {:name "custom/json"
