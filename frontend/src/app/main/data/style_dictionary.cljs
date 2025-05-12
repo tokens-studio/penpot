@@ -78,7 +78,7 @@
                                                           (sd-transforms/getTransforms #js {:platform "none"}))})
     (.registerFormat sd #js {:name "custom/json"
                              :format (fn [^js res]
-                                       (.-tokens (.-dictionary res)))})
+                                       (.. res -dictionary -tokens))})
     sd))
 
 (def default-config
