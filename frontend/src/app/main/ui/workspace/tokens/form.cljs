@@ -125,7 +125,6 @@
              (rx/mapcat
               (fn [resolved-tokens]
                 (let [{:keys [errors resolved-value] :as resolved-token} (get resolved-tokens token-name)]
-                  (js/console.log "resolved-token" resolved-token)
                   (cond
                     resolved-value (rx/of resolved-token)
                     :else (rx/error {:errors (or errors (wte/get-error-code :error/unknown-error))}))))))))))
