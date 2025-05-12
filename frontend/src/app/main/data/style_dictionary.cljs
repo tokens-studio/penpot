@@ -58,8 +58,9 @@
                                 :filter (fn [token _options]
                                           (has-math-expression? (.-value token)))
                                 :transform (fn [token]
-                                             (js/console.log "token" token)
-                                             (convert-rem-to-px (.-value token)))})
+                                             (let [value (.-value token)]
+                                               ;; TODO Return nil if token value has px and rem in the string
+                                               (convert-rem-to-px value)))})
     (.registerTransformGroup sd #js {:name "runtime"
                                      :transforms (.concat #js ["myTransitiveTransform"]
                                                           (sd-transforms/getTransforms #js {:platform "none"}))})
