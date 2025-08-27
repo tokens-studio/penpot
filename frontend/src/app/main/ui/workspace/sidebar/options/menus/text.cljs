@@ -8,6 +8,7 @@
   (:require-macros [app.main.style :as stl])
   (:require
    [app.common.data :as d]
+   [app.common.types.shape.token :as ctst]
    [app.common.types.text :as txt]
    [app.common.uuid :as uuid]
    [app.main.data.workspace.libraries :as dwl]
@@ -189,6 +190,7 @@
 (mf/defc text-menu
   {::mf/wrap [mf/memo]}
   [{:keys [ids type values] :as props}]
+  (def props props)
 
   (let [file-id        (mf/use-ctx ctx/current-file-id)
         typographies   (mf/deref refs/workspace-file-typography)
@@ -281,6 +283,8 @@
 
         multiple? (->> values vals (d/seek #(= % :multiple)))
 
+        find-closest-variant? (some ctst/font-weight-applied? values)
+
         opts #js {:ids ids
                   :values values
                   :on-change on-change
@@ -292,7 +296,9 @@
                      (fn []
                        (when (not= "INPUT" (-> (dom/get-active) (dom/get-tag-name)))
                          (let [node (txu/get-text-editor-content)]
-                           (dom/focus! node))))))}]
+                           (dom/focus! node))))))
+                  :find-closest-variant find-closest-variant?}]
+
     (hooks/use-stream
      expand-stream
      #(swap! state* assoc-in [:more-options] true))
@@ -318,7 +324,8 @@
                                 :typography typography
                                 :local? (= typography-file-id file-id)
                                 :on-detach handle-detach-typography
-                                :on-change handle-change-typography}]
+                                :on-change handle-change-typography
+                                :find-closest-variant find-closest-variant?}]
 
           (= typography-id :multiple)
           [:div {:class (stl/css :multiple-typography)}

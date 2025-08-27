@@ -241,7 +241,10 @@
                     new-values
                     (-> values
                         (merge-attrs shape-attrs)
-                        (merge-attrs content-attrs))]
+                        (merge-attrs content-attrs)
+                        (merge-attrs (fn [v1 v2]
+                                       (js/console.log "v1" v1 v2 attrs)
+                                       {:applied-tokens (:applied-tokens v2)})))]
                 [(conj ids id)
                  new-values])
 
@@ -357,6 +360,9 @@
              (get-attrs shapes objects-no-measures :layout-item)])))
 
         components (filter ctk/instance-head? shapes)]
+
+    (def text-values text-values)
+    (def objects-no-measures objects-no-measures)
 
     [:div {:class (stl/css :options)}
      (when-not (empty? layer-ids)

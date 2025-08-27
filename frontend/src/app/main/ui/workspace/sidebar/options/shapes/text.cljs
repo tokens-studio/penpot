@@ -74,7 +74,7 @@
         stroke-values (select-keys shape stroke-attrs)
 
         text-values (d/merge
-                     (select-keys shape [:grow-type])
+                     (select-keys shape [:grow-type :applied-tokens])
                      (select-keys shape fill/fill-attrs)
                      (dwt/current-root-values
                       {:shape shape

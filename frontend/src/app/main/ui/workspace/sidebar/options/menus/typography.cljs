@@ -11,6 +11,7 @@
    [app.common.data :as d]
    [app.common.data.macros :as dm]
    [app.common.exceptions :as ex]
+   [app.common.types.shape.token :as ctst]
    [app.common.types.text :as txt]
    [app.main.constants :refer [max-input-length]]
    [app.main.data.common :as dcm]
@@ -225,8 +226,8 @@
 
 (mf/defc font-options
   {::mf/wrap-props false}
-  [{:keys [values on-change on-blur show-recent full-size-selector]}]
-  (let [{:keys [font-id font-size font-variant-id]} values
+  [{:keys [values on-change on-blur show-recent full-size-selector find-closest-variant]}]
+  (let [{:keys [font-id font-size font-variant-id font-weight font-style]} values
 
         font-id         (or font-id (:font-id txt/default-typography))
         font-size       (or font-size (:font-size txt/default-typography))
@@ -241,10 +242,12 @@
 
         change-font
         (mf/use-fn
-         (mf/deps on-change fonts)
+         (mf/deps on-change fonts font find-closest-variant)
          (fn [new-font-id]
            (let [{:keys [family] :as font} (get fonts new-font-id)
-                 {:keys [id name weight style]} (fonts/get-default-variant font)]
+                 {:keys [id name weight style]} (if find-closest-variant
+                                                  (fonts/find-closest-variant font font-weight font-style)
+                                                  (fonts/get-default-variant font))]
              (on-change {:font-id new-font-id
                          :font-family family
                          :font-variant-id (or id name)
@@ -436,7 +439,7 @@
 
 (mf/defc text-options
   {::mf/wrap-props false}
-  [{:keys [ids editor values on-change on-blur show-recent]}]
+  [{:keys [ids editor values on-change on-blur show-recent find-closest-variant]}]
   (let [full-size-selector? (and show-recent (= (mf/use-ctx ctx/sidebar) :right))
         opts #js {:editor editor
                   :ids ids
@@ -444,7 +447,8 @@
                   :on-change on-change
                   :on-blur on-blur
                   :show-recent show-recent
-                  :full-size-selector full-size-selector?}]
+                  :full-size-selector full-size-selector?
+                  :find-closest-variant find-closest-variant}]
     [:div {:class (stl/css-case :text-options true
                                 :text-options-full-size full-size-selector?)}
      [:> font-options opts]
@@ -454,7 +458,7 @@
 
 (mf/defc typography-advanced-options
   {::mf/wrap [mf/memo]}
-  [{:keys [visible? typography editable? name-input-ref on-close on-change on-name-blur local? navigate-to-library on-key-down]}]
+  [{:keys [visible? typography editable? name-input-ref on-close on-change on-name-blur local? navigate-to-library on-key-down find-closest-variant]}]
   (let [ref       (mf/use-ref nil)
         font-data (fonts/get-font-data (:font-id typography))]
     (fonts/ensure-loaded! (:font-id typography))
@@ -494,7 +498,8 @@
 
           [:& text-options {:values typography
                             :on-change on-change
-                            :show-recent false}]]
+                            :show-recent false
+                            :find-closest-variant find-closest-variant}]]
 
          [:div {:class (stl/css :typography-info-wrapper)}
           [:div {:class (stl/css :typography-name-wrapper)}
@@ -541,7 +546,7 @@
 
 (mf/defc typography-entry
   {::mf/wrap-props false}
-  [{:keys [file-id typography local? selected? on-click on-change on-detach on-context-menu editing? renaming? focus-name? external-open*]}]
+  [{:keys [file-id typography local? selected? on-click on-change on-detach on-context-menu editing? renaming? focus-name? external-open* find-closest-variant]}]
   (let [name-input-ref       (mf/use-ref)
         read-only?           (mf/use-ctx ctx/workspace-read-only?)
         editable?            (and local? (not read-only?))
@@ -658,4 +663,5 @@
        :on-name-blur on-name-blur
        :on-key-down on-key-down
        :local?  local?
-       :navigate-to-library navigate-to-library}]]))
+       :navigate-to-library navigate-to-library
+       :find-closest-variant find-closest-variant}]]))
