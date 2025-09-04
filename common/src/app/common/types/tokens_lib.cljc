@@ -16,7 +16,6 @@
    [app.common.time :as ct]
    [app.common.transit :as t]
    [app.common.types.token :as cto]
-   [app.common.types.token :as ctt]
    [app.common.uuid :as uuid]
    [clojure.core.protocols :as cp]
    [clojure.datafy :refer [datafy]]
@@ -1502,13 +1501,27 @@ Will return a value that matches this schema:
   (and (not (contains? decoded-json "$metadata"))
        (not (contains? decoded-json "$themes"))))
 
+(defn- transform-font-family-value-dtcg->internal
+  "Transform font family token value from DTCG format to internal format.
+   - If value is a string, split it into an array of font families
+   - If value is already an array, keep it as is
+   - Otherwise return as is"
+  [value]
+  (cond
+    (string? value) (cto/split-font-family value)
+    ;; Keep array / collection
+    (sequential? value) value
+    :else value))
+
 (defn- transform-typography-value-keys-dtcg->internal
   "Transform typography token value keys from DTCG format to internal format."
   [value]
   (if (map? value)
     (-> value
-        (set/rename-keys ctt/dtcg-token-type->token-type)
-        (select-keys ctt/typography-keys))
+        (set/rename-keys cto/dtcg-token-type->token-type)
+        (select-keys cto/typography-keys)
+        ;; Transform font-family values within typography composite tokens
+        (d/update-when :font-family transform-font-family-value-dtcg->internal))
     value))
 
 (defn- flatten-nested-tokens-json
@@ -1528,20 +1541,12 @@ Will return a value that matches this schema:
              (assoc tokens child-path (make-token
                                        :name child-path
                                        :type token-type
-                                       :value (cond-> (get v "$value")
-                                                ;; Split string of font-families
-                                                (and (= :font-family token-type)
-                                                     (string? (get v "$value")))
-                                                cto/split-font-family
-
-                                                ;; Keep array of font-families
-                                                (and (= :font-family token-type)
-                                                     (sequential? (get v "$value")))
-                                                identity
-
-                                                ;; Transform typography token values
-                                                (= :typography token-type)
-                                                transform-typography-value-keys-dtcg->internal)
+                                       :value
+                                       (let [token-value (get v "$value")]
+                                         (case token-type
+                                           :font-family (transform-font-family-value-dtcg->internal token-value)
+                                           :typography (transform-typography-value-keys-dtcg->internal token-value)
+                                           token-value))
                                        :description (get v "$description")))
              ;; Discard unknown type tokens
              tokens)))))
