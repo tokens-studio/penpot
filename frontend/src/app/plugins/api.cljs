@@ -11,10 +11,12 @@
    [app.common.files.changes-builder :as cb]
    [app.common.files.helpers :as cfh]
    [app.common.geom.point :as gpt]
+   [app.common.json :as json]
    [app.common.schema :as sm]
    [app.common.types.color :as ctc]
    [app.common.types.shape :as cts]
    [app.common.types.text :as txt]
+   [app.common.types.tokens-lib :as ctob]
    [app.common.uuid :as uuid]
    [app.main.data.changes :as ch]
    [app.main.data.common :as dcm]
@@ -25,6 +27,7 @@
    [app.main.data.workspace.groups :as dwg]
    [app.main.data.workspace.media :as dwm]
    [app.main.data.workspace.selection :as dws]
+   [app.main.data.workspace.tokens.library-edit :as dwtl]
    [app.main.fonts :refer [fetch-font-css]]
    [app.main.router :as rt]
    [app.main.store :as st]
@@ -544,4 +547,22 @@
 
         :else
         (let [ids (into #{} (map #(obj/get % "$id")) shapes)]
-          (st/emit! (dw/convert-selected-to-path ids)))))))
+          (st/emit! (dw/convert-selected-to-path ids)))))
+
+    :getTokens
+    (fn []
+      (let [file-data (dsh/lookup-file-data @st/state)
+            tokens-lib (get file-data :tokens-lib)]
+        (some-> tokens-lib
+                (ctob/export-dtcg-json)
+                (json/encode :key-fn identity :indent 2))))
+
+    :setTokens
+    (fn [json-string]
+      (js/console.log "json-string" json-string)
+      (try
+        (let [decoded-json (json/decode json-string {:key-fn identity})
+              tokens-lib (ctob/parse-decoded-json decoded-json "____")]
+          (st/emit! (dwtl/import-tokens-lib tokens-lib)))
+        (catch :default e
+          (js/console.error "Error importing json" json-string e))))))

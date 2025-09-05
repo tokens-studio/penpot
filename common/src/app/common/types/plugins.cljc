@@ -6,6 +6,7 @@
 
 (ns app.common.types.plugins
   (:require
+   [app.common.schema :as sm]
    [app.common.schema.generators :as sg]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -36,6 +37,8 @@
    [:code :string]
    [:icon {:optional true} :string]
    [:permissions [:set :string]]])
+
+(sm/register! ::registry-entry schema:registry-entry)
 
 (def schema:plugin-registry
   [:map
