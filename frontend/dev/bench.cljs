@@ -15,6 +15,7 @@
 (defn random
   []
   (js/Math.random))
+;; add comment
 
 (defn force-gc
   []
