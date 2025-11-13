@@ -13,6 +13,7 @@
    [app.common.files.tokens :as cft]
    [app.common.path-names :as cpn]
    [app.common.types.token :as ctt]
+   [app.config :as cf]
    [app.main.data.workspace.tokens.application :as dwta]
    [app.main.data.workspace.tokens.color :as dwtc]
    [app.main.data.workspace.tokens.format :as dwtf]

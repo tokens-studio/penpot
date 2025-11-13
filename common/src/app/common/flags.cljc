@@ -126,6 +126,7 @@
     :token-typography-types
     :token-typography-composite
     :token-shadow
+    :token-tokenscript
     :transit-readable-response
     :user-feedback
     ;; TODO: remove this flag.

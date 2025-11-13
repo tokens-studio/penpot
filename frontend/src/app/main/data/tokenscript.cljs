@@ -1,10 +1,17 @@
 (ns app.main.data.tokenscript
   (:require
-   ["@tokens-studio/tokenscript-interpreter" :refer [jsValueToSymbolType
-                                                     TokenResolver]]
+   ["@tokens-studio/tokenscript-interpreter" :refer [TokenResolver BaseSymbolType]]
+   [app.common.logging :as l]
+   [app.common.time :as ct]
+   [app.main.data.workspace.tokens.errors :as wte]
    [app.main.refs :as refs]
    [clojure.string]
    [cuerdas.core :as str]))
+
+(l/set-level! :debug)
+
+(defn tokenscript-symbol? [v]
+  (instance? BaseSymbolType v))
 
 (defn clj->tokenscript
   [o]
@@ -21,10 +28,6 @@
       (vswap! lines conj "return output;")
       (clojure.string/join "\n" @lines))))
 
-(-> (clj->tokenscript (get-in @refs/workspace-all-tokens-in-selected-set ["typography" :value]))
-    js/console.log)
-
-
 (defn token-set->token-set-map [tokens]
   (let [token-map (js/Map.)]
     (doseq [[k v] tokens]
@@ -35,6 +38,9 @@
         (.set token-map k value)))
     token-map))
 
+(defn tokenscript->penpot-token [token tokenscript-symbol]
+  (assoc token :resolved-value tokenscript-symbol))
+
 (defn build
   "Builds tokens in `tokens-set` using tokenscript-interpreter."
   [tokens]
@@ -44,13 +50,20 @@
     (.processTokens resolver input
                     #js {:onResolve
                          (fn [^js/string token-name ^js/Symbol resolved-value]
-                           (vswap! output assoc token-name resolved-value))
+                           (vswap! output update token-name tokenscript->penpot-token resolved-value))
                          :onError
                          (fn [^js/string token-name ^js/Error error]
-
-                           (js/console.error error)
-                           (js/console.error "Token resolve error" (str "\"" token-name "\"") error))})
+                           (let [value (get tokens token-name)]
+                             (vswap! output assoc-in [token-name :errors] #(assoc % :errors [(wte/error-with-value :error.style-dictionary/invalid-token-value value)]))))})
     @output))
+
+(defn resolve-tokens [tokens]
+  (let [tpoint (ct/tpoint-ms)
+        tokens (build tokens)
+        elapsed (tpoint)]
+    (l/dbg :hint "tokenscript/resolve-tokens" :elapsed elapsed)
+    tokens))
+
 
 (comment
   (token-set->token-set-map @refs/workspace-all-tokens-in-selected-set)

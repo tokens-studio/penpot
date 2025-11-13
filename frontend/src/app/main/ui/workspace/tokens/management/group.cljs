@@ -56,6 +56,7 @@
         can-edit?
         (mf/use-ctx ctx/can-edit?)
 
+        ;; TODO Move this sorting into tokenscript builder
         tokens
         (mf/with-memo [tokens]
           (vec (sort-by :name tokens)))

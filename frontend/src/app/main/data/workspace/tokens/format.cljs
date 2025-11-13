@@ -1,5 +1,6 @@
 (ns app.main.data.workspace.tokens.format
   (:require
+   [app.main.data.tokenscript :as ts]
    [cuerdas.core :as str]))
 
 (def category-dictionary
@@ -27,6 +28,8 @@
   "Converts token value of any shape to a string."
   [token-value]
   (cond
+    (ts/tokenscript-symbol? token-value) (.toString token-value)
+
     (map? token-value)
     (->> (map (fn [[k v]] (str "- " (category-dictionary k) ": " (format-token-value v))) token-value)
          (str/join "\n")
