@@ -49,6 +49,8 @@
     (instance? js/Map token-value)
     (format-map-entries (es6-iterator-seq (.entries token-value)))
 
+    (ts/tokenscript-symbol? token-value) (.toString token-value)
+
     (map? token-value)
     (format-map-entries token-value)
 
