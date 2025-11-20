@@ -1,6 +1,7 @@
 (ns app.main.data.tokenscript
   (:require
-   ["@tokens-studio/tokenscript-interpreter" :refer [BaseSymbolType
+   ["@tokens-studio/tokenscript-interpreter" :refer [BaseSymbolType ListSymbol
+                                                     NumberWithUnitSymbol
                                                      processTokens TokenSymbol]]
    [app.common.logging :as l]
    [app.common.time :as ct]
@@ -17,6 +18,25 @@
 
 (defn structured-token? [v]
   (instance? TokenSymbol v))
+
+(defn number-with-unit-symbol? [v]
+  (instance? NumberWithUnitSymbol v))
+
+(defn list-symbol? [v]
+  (instance? ListSymbol v))
+
+(defn rem-number-with-unit? [v]
+  (and (number-with-unit-symbol? v)
+       (= (.-unit v) "rem")))
+
+(defn rem->px [^js v]
+  (* (.-value v) 16))
+
+(defn tokenscript-symbols->penpot-unit [^js v]
+  (cond
+    (list-symbol? v) (tokenscript-symbols->penpot-unit (.nth 1 v))
+    (rem-number-with-unit? v) (rem->px v)
+    :else (.-value v)))
 
 ;; Processors ------------------------------------------------------------------
 
