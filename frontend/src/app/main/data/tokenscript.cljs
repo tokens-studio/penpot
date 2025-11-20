@@ -1,6 +1,6 @@
 (ns app.main.data.tokenscript
   (:require
-   ["@tokens-studio/tokenscript-interpreter" :refer [TokenResolver BaseSymbolType]]
+   ["@tokens-studio/tokenscript-interpreter" :refer [TokenResolver BaseSymbolType processTokens]]
    [app.common.logging :as l]
    [app.common.time :as ct]
    [app.main.data.workspace.tokens.errors :as wte]
@@ -39,31 +39,39 @@
     token-map))
 
 (defn tokenscript->penpot-token [token tokenscript-symbol]
+  (js/console.log "tokenscript-symbol)" tokenscript-symbol)
   (assoc token :resolved-value tokenscript-symbol))
+
+(defn create-token-builder
+  "Creates a builder class for processing tokens."
+  [tokens]
+  (let [output (volatile! tokens)]
+    #js {:name "penpot-tokens"
+         :onResolve
+         (fn [^js/string token-name ^js/Symbol resolved-value]
+           (vswap! output update token-name tokenscript->penpot-token resolved-value))
+         :onError
+         (fn [^js/string token-name ^js/Error error ^js/string _original-value]
+           (let [value (get tokens token-name)]
+             (vswap! output assoc-in [token-name :errors] [(wte/error-with-value :error.style-dictionary/invalid-token-value value)])))
+         :getResult
+         (fn []
+           @output)}))
 
 (defn build
   "Builds tokens in `tokens-set` using tokenscript-interpreter."
   [tokens]
-  (let [resolver (TokenResolver.)
-        input (token-set->token-set-map tokens)
-        output (volatile! tokens)]
-    (.processTokens resolver input
-                    #js {:onResolve
-                         (fn [^js/string token-name ^js/Symbol resolved-value]
-                           (vswap! output update token-name tokenscript->penpot-token resolved-value))
-                         :onError
-                         (fn [^js/string token-name ^js/Error error]
-                           (let [value (get tokens token-name)]
-                             (vswap! output assoc-in [token-name :errors] #(assoc % :errors [(wte/error-with-value :error.style-dictionary/invalid-token-value value)]))))})
-    @output))
+  (let [input (token-set->token-set-map tokens)
+        result (processTokens input #js {:builder (create-token-builder tokens)})]
+    (js/console.log "result" result)
+    result))
 
 (defn resolve-tokens [tokens]
   (let [tpoint (ct/tpoint-ms)
-        tokens (build tokens)
+        result (build tokens)
         elapsed (tpoint)]
     (l/dbg :hint "tokenscript/resolve-tokens" :elapsed elapsed)
-    tokens))
-
+    (.-output result)))
 
 (comment
   (token-set->token-set-map @refs/workspace-all-tokens-in-selected-set)
