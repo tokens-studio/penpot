@@ -14,8 +14,8 @@
    [app.common.time :as ct]
    [app.common.types.token :as cto]
    [app.common.types.tokens-lib :as ctob]
+   [app.config :as cf]
    [app.main.data.tinycolor :as tinycolor]
-   [app.main.data.tokenscript :as ts]
    [app.main.data.workspace.tokens.errors :as wte]
    [app.main.data.workspace.tokens.warnings :as wtw]
    [beicon.v2.core :as rx]
@@ -596,16 +596,17 @@
   [tokens & {:keys [interactive?]}]
   (let [state* (mf/use-state tokens)]
     (mf/with-effect [tokens interactive?]
-      (if (seq tokens)
-        (let [tpoint  (ct/tpoint-ms)
-              tokens-s  (if interactive?
-                          (resolve-tokens-interactive tokens)
-                          (resolve-tokens tokens))]
+      (when-not (contains? cf/flags :tokenscript)
+        (if (seq tokens)
+          (let [tpoint  (ct/tpoint-ms)
+                tokens-s  (if interactive?
+                            (resolve-tokens-interactive tokens)
+                            (resolve-tokens tokens))]
 
-          (-> tokens-s
-              (rx/sub! (fn [resolved-tokens]
-                         (let [elapsed (tpoint)]
-                           (l/dbg :hint "use-resolved-tokens*" :elapsed elapsed)
-                           (reset! state* resolved-tokens))))))
-        (reset! state* tokens)))
+            (-> tokens-s
+                (rx/sub! (fn [resolved-tokens]
+                           (let [elapsed (tpoint)]
+                             (l/dbg :hint "use-resolved-tokens*" :elapsed elapsed)
+                             (reset! state* resolved-tokens))))))
+          (reset! state* tokens))))
     @state*))

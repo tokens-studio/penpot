@@ -1793,9 +1793,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tokens-studio/tokenscript-interpreter@npm:^0.8.2":
-  version: 0.8.2
-  resolution: "@tokens-studio/tokenscript-interpreter@npm:0.8.2"
+"@tokens-studio/tokenscript-interpreter@npm:^0.9.0":
+  version: 0.9.0
+  resolution: "@tokens-studio/tokenscript-interpreter@npm:0.9.0"
   dependencies:
     arktype: "npm:^2.1.25"
     commander: "npm:^14.0.1"
@@ -1803,7 +1803,7 @@ __metadata:
     yauzl: "npm:^3.2.0"
   bin:
     tokenscript: dist/cli.js
-  checksum: 10c0/22e3549a2fd9f47d8454153f41344269917c6eca132213f45c0fdb68374b7314a79b72d6636c2f220604a16200bba2609eecf686950ba7514956899af20ea517
+  checksum: 10c0/5cea25e50dee934643508711835d10ac59b7b9a75e00ab8f7d0c1cf0237aa2aa043199c2d6de8cdbca0fa671009f94fdecc43f6ca10221e1125654c4f92a25cf
   languageName: node
   linkType: hard
 
@@ -4390,7 +4390,7 @@ __metadata:
     "@storybook/addon-vitest": "npm:10.0.4"
     "@storybook/react-vite": "npm:10.0.4"
     "@tokens-studio/sd-transforms": "npm:1.2.11"
-    "@tokens-studio/tokenscript-interpreter": "npm:^0.8.2"
+    "@tokens-studio/tokenscript-interpreter": "npm:^0.9.0"
     "@types/node": "npm:^22.15.21"
     "@vitest/browser": "npm:3.2.4"
     "@vitest/coverage-v8": "npm:3.2.4"
