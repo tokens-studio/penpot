@@ -11,11 +11,15 @@
 
 (l/set-level! :debug)
 
+;; Helpers ---------------------------------------------------------------------
+
 (defn tokenscript-symbol? [v]
   (instance? BaseSymbolType v))
 
 (defn structured-token? [v]
   (instance? TokenSymbol v))
+
+;; Builders --------------------------------------------------------------------
 
 (defn token-set->token-set-map [tokens]
   (let [token-map (js/Map.)]
@@ -29,20 +33,19 @@
         (.set token-map k value)))
     token-map))
 
-(defn tokenscript->penpot-token [token tokenscript-symbol]
-  (assoc token :resolved-value tokenscript-symbol))
-
 (defn create-token-builder
-  "Creates a builder class for processing tokens."
+  "Collects resolved tokens during build time into a clojure structure.
+   Returns Tokenscript Symbols in `:resolved-value` key."
   [tokens]
   (let [output (volatile! tokens)]
     #js {:onResolve
-         (fn [^js/string token-name ^js/Symbol resolved-value]
-           (vswap! output update token-name tokenscript->penpot-token resolved-value))
+         (fn [^js/String token-name ^js/Symbol resolved-symbol]
+           (vswap! output assoc-in [token-name :resolved-value] resolved-symbol))
          :onError
-         (fn [^js/string token-name ^js/Error error ^js/string _original-value]
-           (let [value (get tokens token-name)]
-             (vswap! output assoc-in [token-name :errors] [(wte/error-with-value :error.style-dictionary/invalid-token-value value)])))
+         (fn [^js/String token-name ^js/Error _error ^js/String _original-value]
+           (let [value (get tokens token-name)
+                 default-error [(wte/error-with-value :error.style-dictionary/invalid-token-value value)]]
+             (vswap! output assoc-in [token-name :errors] default-error)))
          :getResult
          (fn []
            @output)}))
@@ -52,8 +55,9 @@
   [tokens]
   (let [input (token-set->token-set-map tokens)
         result (processTokens input #js {:builder (create-token-builder tokens)})]
-    (js/console.log "result" result)
     result))
+
+;; Main ------------------------------------------------------------------------
 
 (defn resolve-tokens [tokens]
   (let [tpoint (ct/tpoint-ms)
