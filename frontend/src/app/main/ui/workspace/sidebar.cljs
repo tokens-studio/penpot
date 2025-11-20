@@ -362,7 +362,8 @@
         tokenscript? (contains? cf/flags :tokenscript)
 
         tokenscript-resolved-active-tokens
-        (when tokenscript? (ts/resolve-tokens active-tokens))
+        (mf/with-memo [tokens-lib tokenscript?]
+          (when tokenscript? (ts/resolve-tokens active-tokens)))
 
         resolved-active-tokens
         (sd/use-resolved-tokens* active-tokens)]

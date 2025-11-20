@@ -587,9 +587,7 @@
                     (rx/sub! resolved-tokens-s (fn [resolved-tokens]
                                                  (swap! cache-atom assoc tokens resolved-tokens)
                                                  (reset! tokens-state resolved-tokens))))))))
-    (if (contains? cf/flags :tokenscript)
-      (ts/resolve-tokens tokens)
-      @tokens-state)))
+    @tokens-state))
 
 (defn use-resolved-tokens*
   "This hook will return the unresolved tokens as state until they are
