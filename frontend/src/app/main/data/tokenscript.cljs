@@ -31,10 +31,12 @@
 (defn token-set->token-set-map [tokens]
   (let [token-map (js/Map.)]
     (doseq [[k v] tokens]
-      (let [{:keys [value]} v
+      (let [{:keys [value type]} v
             value (if (or (sequential? value) (map? value))
-                    (clj->tokenscript value)
+                    #js {"$value" (clj->js value)
+                         "$type" (name type)}
                     value)]
+        (js/console.log "value" value)
         (.set token-map k value)))
     token-map))
 
@@ -46,8 +48,7 @@
   "Creates a builder class for processing tokens."
   [tokens]
   (let [output (volatile! tokens)]
-    #js {:name "penpot-tokens"
-         :onResolve
+    #js {:onResolve
          (fn [^js/string token-name ^js/Symbol resolved-value]
            (vswap! output update token-name tokenscript->penpot-token resolved-value))
          :onError
