@@ -14,10 +14,12 @@
    [app.common.types.color :as c]
    [app.common.types.token :as cto]
    [app.common.types.tokens-lib :as ctob]
+   [app.config :as cf]
    [app.main.constants :refer [max-input-length]]
    [app.main.data.modal :as modal]
    [app.main.data.style-dictionary :as sd]
    [app.main.data.tinycolor :as tinycolor]
+   [app.main.data.tokenscript :as ts]
    [app.main.data.workspace.tokens.application :as dwta]
    [app.main.data.workspace.tokens.errors :as wte]
    [app.main.data.workspace.tokens.library-edit :as dwtl]
@@ -359,6 +361,7 @@
         (sd/use-resolved-tokens active-theme-tokens
                                 {:cache-atom form-token-cache-atom
                                  :interactive? true})
+        _ (js/console.log "resolved-tokens" resolved-tokens)
 
         token-path
         (mf/with-memo [token-name]
@@ -1454,6 +1457,152 @@
                              :on-get-token-value on-get-token-value
                              :update-composite-backup-value update-composite-backup-value})]))
 
+;; Simple Tokenscript Form -----------------------------------------------------
+
+(mf/defc simple-tokenscript-form*
+  "A simple form for tokenscript that doesn't use async, refs, or validation.
+   Just takes name, value, description and adds the token to the tokens map."
+  [{:keys [token token-type selected-token-set-id action is-create]}]
+  (let [token-type (or (:type token) token-type)
+
+        tokens-in-selected-set
+        (mf/deref refs/workspace-all-tokens-in-selected-set)
+
+        ;; Simple state for form fields
+        name-value* (mf/use-state (or (:name token) ""))
+        value-value* (mf/use-state (or (:value token) ""))
+        description-value* (mf/use-state (or (:description token) ""))
+
+        name-value (deref name-value*)
+        value-value (deref value-value*)
+        description-value (deref description-value*)
+
+        ;; Process tokens with tokenscript
+        resolved-tokens
+        (mf/with-memo [tokens-in-selected-set name-value value-value]
+          (-> (assoc tokens-in-selected-set name-value {:type token-type :value value-value})
+              (ts/resolve-tokens)))
+
+        token-properties
+        (dwta/get-token-properties (or token {:type token-type}))
+
+        on-change-name
+        (mf/use-fn
+         (fn [e]
+           (reset! name-value* (dom/get-target-val e))))
+
+        on-change-value
+        (mf/use-fn
+         (fn [e]
+           (reset! value-value* (dom/get-target-val e))))
+
+        on-change-description
+        (mf/use-fn
+         (fn [e]
+           (reset! description-value* (dom/get-target-val e))))
+
+        disabled?
+        (or (empty? (str/trim name-value))
+            (empty? (str/trim value-value)))
+
+        on-submit
+        (mf/use-fn
+         (mf/deps is-create token token-type name-value value-value description-value)
+         (fn [e]
+           (dom/prevent-default e)
+           (let [clean-name (clean-name name-value)
+                 clean-value (str/trim value-value)
+                 clean-description (str/trim description-value)]
+             (st/emit!
+              (if is-create
+                (dwtl/create-token (ctob/make-token {:name clean-name
+                                                     :type token-type
+                                                     :value clean-value
+                                                     :description clean-description}))
+                (dwtl/update-token (:id token)
+                                   {:name clean-name
+                                    :value clean-value
+                                    :description clean-description}))
+              (dwtp/propagate-workspace-tokens)
+              (modal/hide)))))
+
+        on-cancel
+        (mf/use-fn
+         (fn [e]
+           (dom/prevent-default e)
+           (modal/hide!)))
+
+        on-delete-token
+        (mf/use-fn
+         (mf/deps selected-token-set-id token)
+         (fn [e]
+           (dom/prevent-default e)
+           (modal/hide!)
+           (st/emit! (dwtl/delete-token selected-token-set-id (:id token)))))]
+
+    [:form {:class (stl/css :form-wrapper)
+            :on-submit on-submit}
+     [:div {:class (stl/css :token-rows)}
+      [:> heading* {:level 2 :typography "headline-medium" :class (stl/css :form-modal-title)}
+       (if (= action "edit")
+         (tr "workspace.tokens.edit-token" token-type)
+         (tr "workspace.tokens.create-token" token-type))]
+
+      ;; Name field
+      [:div {:class (stl/css :input-row)}
+       (let [token-title (str/lower (:title token-properties))]
+         [:> input* {:id "token-name"
+                     :label (tr "workspace.tokens.token-name")
+                     :placeholder (tr "workspace.tokens.enter-token-name" token-title)
+                     :max-length max-input-length
+                     :variant "comfortable"
+                     :auto-focus true
+                     :value name-value
+                     :on-change on-change-name}])]
+
+      ;; Value field
+      [:div {:class (stl/css :input-row)}
+       [:> input* {:id "token-value"
+                   :label (tr "workspace.tokens.token-value")
+                   :placeholder (tr "workspace.tokens.token-value-enter")
+                   :max-length max-input-length
+                   :variant "comfortable"
+                   :value value-value
+                   :on-change on-change-value}]
+       (when-let [resolved-value (get-in resolved-tokens [name-value :resolved-value])]
+         [:> token-value-hint* {:result {:resolved-value (.toString resolved-value)}}])]
+
+      ;; Description field
+      [:div {:class (stl/css :input-row)}
+       [:> input* {:id "token-description"
+                   :label (tr "workspace.tokens.token-description")
+                   :placeholder (tr "workspace.tokens.token-description")
+                   :is-optional true
+                   :max-length max-input-length
+                   :variant "comfortable"
+                   :value description-value
+                   :on-change on-change-description}]]
+
+      ;; Buttons
+      [:div {:class (stl/css-case :button-row true
+                                  :with-delete (= action "edit"))}
+       (when (= action "edit")
+         [:> button* {:on-click on-delete-token
+                      :class (stl/css :delete-btn)
+                      :type "button"
+                      :icon i/delete
+                      :variant "secondary"}
+          (tr "labels.delete")])
+       [:> button* {:on-click on-cancel
+                    :type "button"
+                    :id "token-modal-cancel"
+                    :variant "secondary"}
+        (tr "labels.cancel")]
+       [:> button* {:type "submit"
+                    :variant "primary"
+                    :disabled disabled?}
+        (tr "labels.save")]]]]))
+
 (mf/defc form-wrapper*
   [{:keys [token token-type] :rest props}]
   (let [token-type
@@ -1480,13 +1629,16 @@
                                 :tokens-tree-in-selected-set tokens-tree-in-selected-set
                                 :token token})]
 
-    (case token-type
-      :color [:> color-form* props]
-      :typography [:> typography-form* props]
-      :shadow [:> shadow-form* props]
-      :font-family [:> font-family-form* props]
-      :text-case [:> text-case-form* props]
-      :text-decoration [:> text-decoration-form* props]
-      :font-weight [:> font-weight-form* props]
-      :border-radius [:> border-radius/form* props]
-      [:> form* props])))
+    ;; Use simple tokenscript form when flag is enabled
+    (if (contains? cf/flags :tokenscript)
+      [:> simple-tokenscript-form* props]
+      (case token-type
+        :color [:> color-form* props]
+        :typography [:> typography-form* props]
+        :shadow [:> shadow-form* props]
+        :font-family [:> font-family-form* props]
+        :text-case [:> text-case-form* props]
+        :text-decoration [:> text-decoration-form* props]
+        :font-weight [:> font-weight-form* props]
+        :border-radius [:> border-radius/form* props]
+        [:> form* props]))))
