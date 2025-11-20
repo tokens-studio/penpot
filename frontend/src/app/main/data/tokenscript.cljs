@@ -6,8 +6,7 @@
    [app.common.time :as ct]
    [app.main.data.workspace.tokens.errors :as wte]
    [app.main.refs :as refs]
-   [clojure.string]
-   [okulary.util :as ou]))
+   [clojure.string]))
 
 (l/set-level! :debug)
 
@@ -19,19 +18,7 @@
 (defn structured-token? [v]
   (instance? TokenSymbol v))
 
-;; Builders --------------------------------------------------------------------
-
-(defn token-set->token-set-map [tokens]
-  (let [token-map (js/Map.)]
-    (doseq [[k v] tokens]
-      (let [{:keys [value type]} v
-            value (if (or (sequential? value) (map? value))
-                    #js {"$value" (clj->js value)
-                         "$type" (name type)}
-                    value)]
-        (js/console.log "value" value)
-        (.set token-map k value)))
-    token-map))
+;; Processors ------------------------------------------------------------------
 
 (defn create-token-builder
   "Collects resolved tokens during build time into a clojure structure.
@@ -50,10 +37,18 @@
          (fn []
            @output)}))
 
-(defn build
+(defn clj-tokens->tokenscript-tokens
+  "Convert clojure map into tokenscript map structure."
+  [tokens]
+  (let [token-map (js/Map.)]
+    (doseq [[k {:keys [value type]}] tokens]
+      (.set token-map k #js {"$type" type "$value" (clj->js value)}))
+    token-map))
+
+(defn process-tokens
   "Builds tokens in `tokens-set` using tokenscript-interpreter."
   [tokens]
-  (let [input (token-set->token-set-map tokens)
+  (let [input (clj-tokens->tokenscript-tokens tokens)
         result (processTokens input #js {:builder (create-token-builder tokens)})]
     result))
 
@@ -61,29 +56,11 @@
 
 (defn resolve-tokens [tokens]
   (let [tpoint (ct/tpoint-ms)
-        result (build tokens)
+        result (process-tokens tokens)
         elapsed (tpoint)]
     (l/dbg :hint "tokenscript/resolve-tokens" :elapsed elapsed)
     (.-output result)))
 
 (comment
-  (-> (token-set->token-set-map @refs/workspace-all-tokens-in-selected-set)
-      (.get "foo"))
-  (do
-    (defonce a (atom nil))
-    (-> (build @refs/workspace-all-tokens-in-selected-set)
-        (doto js/console.log)))
-
-  (let [entries (-> (build @refs/workspace-all-tokens-in-selected-set)
-                    (.-output)
-                    (get "foo")
-                    :resolved-value
-                    .-value
-                    .entries)]
-    (ou/doiter entries (fn [n] (aget n 1))))
-
-
-  (get @a "typography")
-
-
+  (.-output (process-tokens @refs/workspace-all-tokens-in-selected-set))
   nil)
