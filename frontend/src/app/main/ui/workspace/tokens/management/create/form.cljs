@@ -1538,7 +1538,11 @@
          (fn [e]
            (dom/prevent-default e)
            (modal/hide!)
-           (st/emit! (dwtl/delete-token selected-token-set-id (:id token)))))]
+           (st/emit! (dwtl/delete-token selected-token-set-id (:id token)))))
+
+        resolved-value (get-in resolved-tokens [name-value :resolved-value])]
+
+    (js/console.log "resolved-value" resolved-value)
 
     [:form {:class (stl/css :form-wrapper)
             :on-submit on-submit}
@@ -1569,7 +1573,7 @@
                    :variant "comfortable"
                    :value value-value
                    :on-change on-change-value}]
-       (when-let [resolved-value (get-in resolved-tokens [name-value :resolved-value])]
+       (when resolved-value
          [:> token-value-hint* {:result {:resolved-value (.toString resolved-value)}}])]
 
       ;; Description field
