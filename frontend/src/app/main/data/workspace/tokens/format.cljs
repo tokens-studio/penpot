@@ -24,16 +24,31 @@
    :color "Color"
    :inset "Inner Shadow"})
 
+(declare format-token-value)
+
+(defn- format-map-entries
+  "Formats a sequence of [k v] entries into a formatted string."
+  [entries]
+  (->> entries
+       (map (fn [[k v]]
+              (str "- " (category-dictionary (keyword k)) ": " (format-token-value v))))
+       (str/join "\n")
+       (str "\n")))
+
 (defn format-token-value
   "Converts token value of any shape to a string."
   [token-value]
   (cond
+    (ts/structured-token? token-value)
+    (format-token-value (.-value token-value))
+
     (ts/tokenscript-symbol? token-value) (.toString token-value)
 
+    (instance? js/Map token-value)
+    (format-map-entries (es6-iterator-seq (.entries token-value)))
+
     (map? token-value)
-    (->> (map (fn [[k v]] (str "- " (category-dictionary k) ": " (format-token-value v))) token-value)
-         (str/join "\n")
-         (str "\n"))
+    (format-map-entries token-value)
 
     (and (sequential? token-value) (every? map? token-value))
     (str/join "\n" (map format-token-value token-value))

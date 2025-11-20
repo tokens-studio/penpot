@@ -1,32 +1,21 @@
 (ns app.main.data.tokenscript
   (:require
-   ["@tokens-studio/tokenscript-interpreter" :refer [TokenResolver BaseSymbolType processTokens]]
+   ["@tokens-studio/tokenscript-interpreter" :refer [BaseSymbolType
+                                                     processTokens TokenSymbol]]
    [app.common.logging :as l]
    [app.common.time :as ct]
    [app.main.data.workspace.tokens.errors :as wte]
    [app.main.refs :as refs]
    [clojure.string]
-   [cuerdas.core :as str]))
+   [okulary.util :as ou]))
 
 (l/set-level! :debug)
 
 (defn tokenscript-symbol? [v]
   (instance? BaseSymbolType v))
 
-(defn clj->tokenscript
-  [o]
-  (cond
-    (sequential? o) (str/join ", " o)
-    (map? o)
-    (let [lines (volatile! ["variable output: Dictionary;"])]
-      (doseq [[k v] o]
-        (let [value-str (if (vector? v)
-                          (str/join ", " v)
-                          v)
-              line (str "output.set(" "\"" (name k) "\"" ", " value-str ");")]
-          (vswap! lines conj line)))
-      (vswap! lines conj "return output;")
-      (clojure.string/join "\n" @lines))))
+(defn structured-token? [v]
+  (instance? TokenSymbol v))
 
 (defn token-set->token-set-map [tokens]
   (let [token-map (js/Map.)]
@@ -41,7 +30,6 @@
     token-map))
 
 (defn tokenscript->penpot-token [token tokenscript-symbol]
-  (js/console.log "tokenscript-symbol)" tokenscript-symbol)
   (assoc token :resolved-value tokenscript-symbol))
 
 (defn create-token-builder
@@ -75,11 +63,20 @@
     (.-output result)))
 
 (comment
-  (token-set->token-set-map @refs/workspace-all-tokens-in-selected-set)
+  (-> (token-set->token-set-map @refs/workspace-all-tokens-in-selected-set)
+      (.get "foo"))
   (do
     (defonce a (atom nil))
     (-> (build @refs/workspace-all-tokens-in-selected-set)
         (doto js/console.log)))
+
+  (let [entries (-> (build @refs/workspace-all-tokens-in-selected-set)
+                    (.-output)
+                    (get "foo")
+                    :resolved-value
+                    .-value
+                    .entries)]
+    (ou/doiter entries (fn [n] (aget n 1))))
 
 
   (get @a "typography")
