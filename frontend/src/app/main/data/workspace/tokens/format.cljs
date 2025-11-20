@@ -39,8 +39,8 @@
   "Converts token value of any shape to a string."
   [token-value]
   (cond
-    (ts/number-with-unit-symbol? token-value)
-    (format-token-value (.-value token-value))
+    (ts/rem-number-with-unit? token-value)
+    (str (ts/rem->px token-value) "px")
 
     (ts/color-symbol? token-value) (.to token-value "hex")
 

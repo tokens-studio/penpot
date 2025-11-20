@@ -113,7 +113,6 @@
                           :attrs [:strokes]}))))
 
 (defn update-color [f value shape-ids page-id]
-  (js/console.log "value" value)
   (when-let [tc (tinycolor/valid-color value)]
     (let [hex (tinycolor/->hex-string tc)
           opacity (tinycolor/alpha tc)]

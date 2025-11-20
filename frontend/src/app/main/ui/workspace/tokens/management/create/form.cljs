@@ -361,7 +361,6 @@
         (sd/use-resolved-tokens active-theme-tokens
                                 {:cache-atom form-token-cache-atom
                                  :interactive? true})
-        _ (js/console.log "resolved-tokens" resolved-tokens)
 
         token-path
         (mf/with-memo [token-name]
