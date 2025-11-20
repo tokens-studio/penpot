@@ -39,8 +39,10 @@
   "Converts token value of any shape to a string."
   [token-value]
   (cond
-    (ts/structured-token? token-value)
+    (ts/number-with-unit-symbol? token-value)
     (format-token-value (.-value token-value))
+
+    (ts/color-symbol? token-value) (.to token-value "hex")
 
     (ts/tokenscript-symbol? token-value) (.toString token-value)
 

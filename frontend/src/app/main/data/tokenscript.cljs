@@ -1,7 +1,10 @@
 (ns app.main.data.tokenscript
   (:require
+   ["./tokenscript_config.js" :refer [COLOR_SCHEMAS]]
    ["@tokens-studio/tokenscript-interpreter" :refer [BaseSymbolType ListSymbol
                                                      NumberWithUnitSymbol
+                                                     ColorSymbol
+                                                     Config
                                                      processTokens TokenSymbol]]
    [app.common.logging :as l]
    [app.common.time :as ct]
@@ -10,6 +13,12 @@
    [clojure.string]))
 
 (l/set-level! :debug)
+
+;; Config ----------------------------------------------------------------------
+
+(def config
+  (-> (Config.)
+      (.registerSchemas COLOR_SCHEMAS)))
 
 ;; Helpers ---------------------------------------------------------------------
 
@@ -25,6 +34,9 @@
 (defn list-symbol? [v]
   (instance? ListSymbol v))
 
+(defn color-symbol? [v]
+  (instance? ColorSymbol v))
+
 (defn rem-number-with-unit? [v]
   (and (number-with-unit-symbol? v)
        (= (.-unit v) "rem")))
@@ -35,6 +47,7 @@
 (defn tokenscript-symbols->penpot-unit [^js v]
   (cond
     (list-symbol? v) (tokenscript-symbols->penpot-unit (.nth 1 v))
+    (color-symbol? v) (.-value (.to v "hex"))
     (rem-number-with-unit? v) (rem->px v)
     :else (.-value v)))
 
@@ -69,7 +82,8 @@
   "Builds tokens in `tokens-set` using tokenscript-interpreter."
   [tokens]
   (let [input (clj-tokens->tokenscript-tokens tokens)
-        result (processTokens input #js {:builder (create-token-builder tokens)})]
+        result (processTokens input #js {:config config
+                                         :builder (create-token-builder tokens)})]
     result))
 
 ;; Main ------------------------------------------------------------------------

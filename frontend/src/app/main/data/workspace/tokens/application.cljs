@@ -113,6 +113,7 @@
                           :attrs [:strokes]}))))
 
 (defn update-color [f value shape-ids page-id]
+  (js/console.log "value" value)
   (when-let [tc (tinycolor/valid-color value)]
     (let [hex (tinycolor/->hex-string tc)
           opacity (tinycolor/alpha tc)]
@@ -533,6 +534,7 @@
                           resolved-value (if (contains? cf/flags :tokenscript)
                                            (ts/tokenscript-symbols->penpot-unit resolved-value)
                                            resolved-value)
+                          _ (js/console.log "r)" resolved-value)
                           tokenized-attributes (cft/attributes-map attributes token)
                           type (:type token)]
                       (rx/concat
